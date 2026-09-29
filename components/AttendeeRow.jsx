@@ -2,8 +2,21 @@
 
 import { useState } from "react";
 
-export default function AttendeeRow({ physician, onCheckIn, onToggleCard, onPhoto }) {
+export default function AttendeeRow({ physician, onCheckIn, onToggleCard, onPhoto, onDescriptor }) {
   const [uploading, setUploading] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  function startEditing() {
+    setDraft(physician.descriptor || "");
+    setEditing(true);
+  }
+
+  async function saveDescriptor() {
+    setEditing(false);
+    if ((draft.trim() || null) === (physician.descriptor || null)) return;
+    await onDescriptor(physician, draft);
+  }
 
   async function handlePhoto(e) {
     const file = e.target.files?.[0];
@@ -101,10 +114,33 @@ export default function AttendeeRow({ physician, onCheckIn, onToggleCard, onPhot
             </h3>
           </div>
           <p className="mt-0.5 truncate text-sm text-slate-500">{meta || "—"}</p>
-          {physician.descriptor && (
-            <p className="mt-0.5 truncate text-xs italic text-slate-600">
-              {physician.descriptor}
-            </p>
+          {editing ? (
+            <input
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={saveDescriptor}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") e.currentTarget.blur();
+                if (e.key === "Escape") setEditing(false);
+              }}
+              autoFocus
+              placeholder="e.g. tall, navy blazer, glasses"
+              aria-label={`Descriptor for Dr. ${physician.name}`}
+              className="mt-1 w-full max-w-xs rounded-md border border-console-line bg-ink-950 px-2 py-1 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-2 focus:ring-signal-go"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={startEditing}
+              title={physician.descriptor ? "Edit descriptor" : "Add descriptor"}
+              className={`mt-0.5 block max-w-full truncate rounded text-left text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-signal-go ${
+                physician.descriptor
+                  ? "italic text-slate-600 hover:text-slate-400"
+                  : "text-slate-600 hover:text-signal-go"
+              }`}
+            >
+              {physician.descriptor || "+ Add descriptor"}
+            </button>
           )}
         </div>
       </div>

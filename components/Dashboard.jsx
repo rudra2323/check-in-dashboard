@@ -157,6 +157,33 @@ export default function Dashboard() {
     }
   }, []);
 
+  const updateDescriptor = useCallback(async (physician, text) => {
+    const nextValue = text.trim() || null;
+    const previous = physician.descriptor;
+
+    setPhysicians((current) =>
+      current.map((a) =>
+        a.id === physician.id ? { ...a, descriptor: nextValue } : a
+      )
+    );
+
+    const { error } = await supabase
+      .from("physicians")
+      .update({ descriptor: nextValue })
+      .eq("id", physician.id);
+
+    if (error) {
+      setPhysicians((current) =>
+        current.map((a) =>
+          a.id === physician.id ? { ...a, descriptor: previous } : a
+        )
+      );
+      setErrorMsg("Descriptor didn't save. Check your connection and try again.");
+      return false;
+    }
+    return true;
+  }, []);
+
   const addPhysician = useCallback(async (record) => {
     const { data, error } = await supabase
       .from("physicians")
@@ -310,6 +337,7 @@ export default function Dashboard() {
                 onCheckIn={toggleCheckIn}
                 onToggleCard={toggleThankYouCard}
                 onPhoto={updatePhoto}
+                onDescriptor={updateDescriptor}
               />
             </li>
           ))}
