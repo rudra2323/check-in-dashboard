@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase, PHOTO_BUCKET } from "@/lib/supabaseClient";
+import { resizeImage } from "@/lib/resizeImage";
 import AttendeeRow from "@/components/AttendeeRow";
 import AddAttendeeForm from "@/components/AddAttendeeForm";
 
@@ -123,6 +124,36 @@ export default function Dashboard() {
         )
       );
       setErrorMsg("That didn't save. Check your connection and try again.");
+    }
+  }, []);
+
+  const updatePhoto = useCallback(async (physician, file) => {
+    try {
+      const blob = await resizeImage(file);
+      const path = `${physician.id}-${Date.now()}.jpg`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(PHOTO_BUCKET)
+        .upload(path, blob, { contentType: "image/jpeg" });
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage.from(PHOTO_BUCKET).getPublicUrl(path);
+
+      const { error } = await supabase
+        .from("physicians")
+        .update({ photo_url: data.publicUrl })
+        .eq("id", physician.id);
+      if (error) throw error;
+
+      setPhysicians((current) =>
+        current.map((a) =>
+          a.id === physician.id ? { ...a, photo_url: data.publicUrl } : a
+        )
+      );
+      return true;
+    } catch {
+      setErrorMsg("Photo didn't save. Check your connection and try again.");
+      return false;
     }
   }, []);
 
@@ -278,6 +309,7 @@ export default function Dashboard() {
                 physician={physician}
                 onCheckIn={toggleCheckIn}
                 onToggleCard={toggleThankYouCard}
+                onPhoto={updatePhoto}
               />
             </li>
           ))}

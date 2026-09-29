@@ -1,6 +1,19 @@
 "use client";
 
-export default function AttendeeRow({ physician, onCheckIn, onToggleCard }) {
+import { useState } from "react";
+
+export default function AttendeeRow({ physician, onCheckIn, onToggleCard, onPhoto }) {
+  const [uploading, setUploading] = useState(false);
+
+  async function handlePhoto(e) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setUploading(true);
+    await onPhoto(physician, file);
+    setUploading(false);
+  }
+
   const checked = physician.checked_in;
   const isLiaison = physician.event_type === "liaison_lunch";
 
@@ -30,18 +43,43 @@ export default function AttendeeRow({ physician, onCheckIn, onToggleCard }) {
       }`}
     >
       <div className="flex min-w-0 gap-3">
-        {physician.photo_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={physician.photo_url}
-            alt=""
-            className="h-11 w-11 shrink-0 rounded-full object-cover"
+        <label
+          className="group relative h-11 w-11 shrink-0 cursor-pointer rounded-full focus-within:ring-2 focus-within:ring-signal-go"
+          title={physician.photo_url ? "Replace photo" : "Add photo"}
+        >
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handlePhoto}
+            disabled={uploading}
+            className="sr-only"
+            aria-label={`${physician.photo_url ? "Replace" : "Add"} photo for Dr. ${physician.name}`}
           />
-        ) : (
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink-800 font-mono text-sm font-semibold text-slate-400">
-            {initials}
-          </div>
-        )}
+          {physician.photo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={physician.photo_url}
+              alt=""
+              className="h-11 w-11 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-ink-800 font-mono text-sm font-semibold text-slate-400">
+              {initials}
+            </div>
+          )}
+          <span
+            className={`absolute inset-0 flex items-center justify-center rounded-full bg-black/60 text-[10px] font-semibold text-slate-100 transition-opacity ${
+              uploading ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            }`}
+          >
+            {uploading ? "…" : physician.photo_url ? "Change" : "+ Photo"}
+          </span>
+          {!physician.photo_url && !uploading && (
+            <span className="absolute -bottom-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-console-bg bg-signal-go text-[10px] font-bold leading-none text-ink-950">
+              +
+            </span>
+          )}
+        </label>
 
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
